@@ -104,7 +104,7 @@
 
     fetch(apiUrl,{
         headers: {
-            'Authorization': `Bearer ${ACCESS_TOKEN}`  // OAuth token here
+            'Authorization': `Bearer ${ACCESS_TOKEN}` 
         }
     })
     .then(res => res.json())

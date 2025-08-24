@@ -21,6 +21,37 @@ class PipedriveController extends Controller
 
         $accesstoken = $pipedriveUser->access_token ?? null;
 
+        if (isset($pipedriveUser->expires_at) && now()->gte($pipedriveUser->expires_at)) {
+            try {
+                $response = Http::asForm()->post('https://oauth.pipedrive.com/oauth/token', [
+                    'grant_type'    => 'refresh_token',
+                    'refresh_token' => $pipedriveUser->refresh_token,
+                    'client_id'     => env('PIPEDRIVE_CLIENT_ID'),
+                    'client_secret' => env('PIPEDRIVE_CLIENT_SECRET'),
+                    'redirect_uri'  => env('PIPEDRIVE_REDIRECT_URI'),
+                ]);
+
+                if ($response->successful()) {
+                    $newTokens = $response->json();
+
+                    $expiresAt = now()->addSeconds($newTokens['expires_in']);
+
+                    DB::table('pipedrive_tokens')
+                        ->where('id', $pipedriveUser->id)
+                        ->update([
+                            'access_token'  => $newTokens['access_token'],
+                            'refresh_token' => $newTokens['refresh_token'] ?? $pipedriveUser->refresh_token,
+                            'expires_at'    => $expiresAt,
+                            'updated_at'    => now(),
+                        ]);
+
+                    $accessToken = $newTokens['access_token'];
+                } 
+            } catch (\Exception $e) {     
+            }
+        }
+
+
         return view('pipedrive.panel', compact('referrer','accesstoken')); 
     }
 
