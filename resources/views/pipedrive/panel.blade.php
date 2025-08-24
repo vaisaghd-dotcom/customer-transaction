@@ -88,17 +88,25 @@
     const selectedId = urlParams.get('selectedIds');
     const context = await sdk.execute('get_metadata'); 
 
-    const PIPEDRIVE_API_TOKEN = "{{ env('PIPEDRIVE_API_TOKEN') }}";
-    const PIPEDRIVE_DOMAIN = "{{ env('PIPEDRIVE_DOMAIN') }}";
+    const ACCESS_TOKEN = "{{ $accesstoken }}";
+
+    if (!ACCESS_TOKEN) {
+        document.getElementById('transactions').innerText = 'No API token found for this domain.';
+        return;
+    }
 
     const email = context.person?.primary_email || context.deal?.person?.email;
     document.getElementById('lead-email').innerText = email || 'N/A';
 
     let apiUrl = resource === 'deal'
-        ? `https://api.pipedrive.com/v1/deals/${selectedId}?api_token=${PIPEDRIVE_API_TOKEN}`
-        : `https://api.pipedrive.com/v1/persons/${selectedId}?api_token=${PIPEDRIVE_API_TOKEN}`;
+        ? `https://api.pipedrive.com/v1/deals/${selectedId}`
+        : `https://api.pipedrive.com/v1/persons/${selectedId}`;
 
-    fetch(apiUrl)
+    fetch(apiUrl,{
+        headers: {
+            'Authorization': `Bearer ${ACCESS_TOKEN}`  // OAuth token here
+        }
+    })
     .then(res => res.json())
     .then(data => {
         let email = resource === 'deal'

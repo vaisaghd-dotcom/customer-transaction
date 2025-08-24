@@ -7,11 +7,63 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
+
 class PipedriveController extends Controller
 {
     public function panel(Request $request)
+    {   
+        $referrer = rtrim($request->server('HTTP_REFERER'), '/');
+
+        $pipedriveUser = DB::table('pipedrive_tokens')
+        ->where('api_domain', $referrer)
+        ->latest()
+        ->first();
+
+        $accesstoken = $pipedriveUser->access_token ?? null;
+
+        return view('pipedrive.panel', compact('referrer','accesstoken')); 
+    }
+
+    public function fetchData(Request $request)
     {
-        return view('pipedrive.panel'); 
+        $user = DB::table('pipedrive_users',$request->query('pipedrive_user_id'))->first();
+        $token = $user->access_token;
+
+        // Refresh token if expired
+        if ($user->token_expires_at < now()) {
+            $token = $this->refreshToken($user);
+        }
+
+        $resource = $request->query('resource');
+        $selectedId = $request->query('selectedId');
+
+        $url = $resource === 'deal'
+            ? "https://api.pipedrive.com/v1/deals/$selectedId?api_token=$token"
+            : "https://api.pipedrive.com/v1/persons/$selectedId?api_token=$token";
+
+        $response = Http::get($url);
+
+        return $response->json();
+    }
+
+    private function refreshToken($user)
+    {
+        $response = Http::asForm()->post('https://oauth.pipedrive.com/oauth/token', [
+            'grant_type' => 'refresh_token',
+            'refresh_token' => $user->pipedrive_refresh_token,
+            'client_id' => config('services.pipedrive.client_id'),
+            'client_secret' => config('services.pipedrive.client_secret'),
+        ]);
+
+        $data = $response->json();
+
+        $user->update([
+            'pipedrive_access_token' => $data['access_token'],
+            'pipedrive_refresh_token' => $data['refresh_token'],
+            'token_expires_at' => now()->addSeconds($data['expires_in']),
+        ]);
+
+        return $data['access_token'];
     }
 
     public function stripeData(Request $request)
@@ -33,7 +85,7 @@ class PipedriveController extends Controller
         return $response->json();
     }
 
-        public function handleCallback(Request $request)
+    public function handleCallback(Request $request)
     {
         $code = $request->query('code');
         $state = $request->query('state');
