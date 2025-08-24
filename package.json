@@ -18,7 +18,8 @@
         "webpack-cli": "^6.0.1"
     },
     "dependencies": {
-        "@pipedrive/app-extensions-sdk": "^0.13.0"
+        "@pipedrive/app-extensions-sdk": "^0.13.0",
+        "dotenv": "^17.2.1"
     },
     "name": "customer-transaction",
     "version": "1.0.0",

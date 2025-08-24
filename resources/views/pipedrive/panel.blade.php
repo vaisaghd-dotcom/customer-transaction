@@ -88,12 +88,15 @@
     const selectedId = urlParams.get('selectedIds');
     const context = await sdk.execute('get_metadata'); 
 
+    const PIPEDRIVE_API_TOKEN = "{{ env('PIPEDRIVE_API_TOKEN') }}";
+    const PIPEDRIVE_DOMAIN = "{{ env('PIPEDRIVE_DOMAIN') }}";
+
     const email = context.person?.primary_email || context.deal?.person?.email;
     document.getElementById('lead-email').innerText = email || 'N/A';
 
     let apiUrl = resource === 'deal'
-        ? `https://api.pipedrive.com/v1/deals/${selectedId}?api_token=8c811749573e5f05a03ac8f7eb11815fab1164d3`
-        : `https://api.pipedrive.com/v1/persons/${selectedId}?api_token=8c811749573e5f05a03ac8f7eb11815fab1164d3`;
+        ? `https://api.pipedrive.com/v1/deals/${selectedId}?api_token=${PIPEDRIVE_API_TOKEN}`
+        : `https://api.pipedrive.com/v1/persons/${selectedId}?api_token=${PIPEDRIVE_API_TOKEN}`;
 
     fetch(apiUrl)
     .then(res => res.json())
@@ -103,7 +106,7 @@
             : data.data?.email?.[0]?.value || '';
         document.getElementById('lead-email').innerText = email || 'N/A';
 
-        fetch('https://e0d4d2acbd07.ngrok-free.app/stripe_data?email=' + encodeURIComponent(email))
+        fetch('https://662c929dba48.ngrok-free.app/stripe_data?email=' + encodeURIComponent(email))
         .then(res => res.json())
         .then(data => {
             if (data.error) {
